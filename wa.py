@@ -12,11 +12,6 @@ def start(bot, update):
     update.message.reply_text('Hi!')
 
 
-def help(bot, update):
-    print('Received /help command')
-    update.message.reply_text('Help!')
-
-
 def message(bot, update):
     print('Received an update')
     global context
@@ -31,13 +26,26 @@ def message(bot, update):
         input={'text': update.message.text},
         context=context)
     print(json.dumps(response, indent=2))
-    context = response['context']
-
+    if len(response['entities'])>0:    	
+	entity=response['entities'][0]['entity']
+    	value=response['entities'][0]['value']
+    if len(response['intents'])>0:
+    	intent=response['intents'][0]['intent']
+    #context = response['context']
     # build response
-    resp = ''
-    for text in response['output']['text']:
-        resp += text
+    resp=''
+    if intent == 'Greeting':
+        resp = "I am your calorie counting bot"
+    
+    if intent == 'foodConsumed':
+        resp = "How much did you have?"
 
+    if intent == 'countCalorie':
+        resp = "What have you eaten?"
+
+    if intent == 'WhatCanIEat':
+        resp = "What is your calorie count today?"
+    print(intent)
     update.message.reply_text(resp)
 
 
@@ -50,7 +58,7 @@ def main():
 
     # on different commands - answer in Telegram
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help))
+    #dp.add_handler(CommandHandler("help", help))
 
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, message))
