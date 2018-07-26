@@ -1,9 +1,11 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram.error import (TelegramError, Unauthorized, BadRequest, 
+                            TimedOut, ChatMigrated, NetworkError)
 from watson_developer_cloud import ConversationV1
 import json
-
-context = None
-
+import sqlite3
+context= None
+d={'name':'user'}
 
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
@@ -12,41 +14,83 @@ def start(bot, update):
     update.message.reply_text('Hi!')
 
 
+def error_callback(bot, update, error):
+    print(error.message)
+
+
 def message(bot, update):
     print('Received an update')
     global context
-
+    print('abc')
     conversation = ConversationV1(username='7405d895-fb87-4785-a931-8499e313dc4f',  # TODO
                                   password='mF3wu4pHNwug',  # TODO
                                   version='2018-02-16')
 
     # get response from watson
+    print('bbb')
     response = conversation.message(
         workspace_id='25acc319-55ec-4fda-a803-5b220661c844',  # TODO
         input={'text': update.message.text},
         context=context)
+    #print('aaa')
     print(json.dumps(response, indent=2))
+    #print('def')
+    # handle no entities
     if len(response['entities'])>0:    	
-	entity=response['entities'][0]['entity']
-    	value=response['entities'][0]['value']
+	entity = response['entities'][0]['entity']
+    	value = response['entities'][0]['value']
+    
+    # handle no intents
     if len(response['intents'])>0:
     	intent=response['intents'][0]['intent']
-    #context = response['context']
+        print(intent)
+    
+
+    context = response['context']
     # build response
+
+    #storing date in the database
+    conn=sqlite3.connect('calorie.db')
+    c = conn.cursor()
+
     resp=''
+    #foods1=''
     if intent == 'Greeting':
         resp = "I am your calorie counting bot"
-    
-    if intent == 'foodConsumed':
-        resp = "How much did you have?"
+        update.message.reply_text(resp)
+    elif intent == 'countCalorie':  # how many calories consumed so far
+        # TODO check if calorie count for the day exists for the user
+        resp = "You haven't told me what you ate so far today. What did you eat?"
+        update.message.reply_text(resp)
+    elif intent == 'foodConsumed':  # what food items have i eaten so far
+        if entity == 'foods':
+            resp = "How much did you have?"
+            update.message.reply_text(resp)               
+        print('+++++++++++++++++++++++++++',response['context']['foods'],'++++++++++++++++++++')
+        foodItem = response['context']['foods']
+        foods =  foodItem.encode('ascii','ignore')
+        count = response['context']['quantity']
+        if 'foods' in response['context'] and 'quantity' in response['context']:
+            query = "SELECT kcal FROM calories WHERE food ='" +foods+"'"
+            c.execute(query)
+            print(query)
+            print('+++++++++++++++++++++++++++',response['context']['quantity'],'+++++++++++++++')
+            r= c.fetchall()
+            cal = ''
+            for row in r:
+               cal = int(row[0])
+            cal = cal*count
+            update.message.reply_text("Your calorie count is ")
+            update.message.reply_text(cal)
+            response['context'].pop('foods', None)
+            response['context'].pop('quantity', None)
 
-    if intent == 'countCalorie':
-        resp = "What have you eaten?"
-
-    if intent == 'WhatCanIEat':
+    elif intent == 'WhatCanIEat':  # what else can i eat based on my current calorie consumption
         resp = "What is your calorie count today?"
-    print(intent)
-    update.message.reply_text(resp)
+        update.message.reply_text(resp)
+    
+    conn.commit()
+    conn.close()
 
 
 def main():
@@ -63,6 +107,9 @@ def main():
     # on noncommand i.e message - echo the message on Telegram
     dp.add_handler(MessageHandler(Filters.text, message))
 
+    # to handle error
+    dp.add_error_handler(error_callback)
+
     # Start the Bot
     updater.start_polling()
 
@@ -71,6 +118,11 @@ def main():
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
 
+    #storing date in the database
+    #conn=sqlite3.connect('calorie.db')
+    #c = conn.cursor()
 
+    #conn.commit()
+    #conn.close()
 if __name__ == '__main__':
     main()
