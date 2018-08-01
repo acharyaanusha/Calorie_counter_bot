@@ -50,7 +50,7 @@ def message(bot, update):
     # build response
 
     #storing date in the database
-    conn=sqlite3.connect('calorie.db')
+    conn = sqlite3.connect('calorie.db')
     c = conn.cursor()
 
     resp=''
@@ -58,10 +58,23 @@ def message(bot, update):
     if intent == 'Greeting':
         resp = "I am your calorie counting bot"
         update.message.reply_text(resp)
+	#users.getFullUser
+	#id:InputUser = UserFull
+	print(id)
     elif intent == 'countCalorie':  # how many calories consumed so far
         # TODO check if calorie count for the day exists for the user
-        resp = "You haven't told me what you ate so far today. What did you eat?"
-        update.message.reply_text(resp)
+        #resp = "You haven't told me what you ate so far today. What did you eat?"
+        query4 = "SELECT calorie FROM foodConsumed"
+	print(query4)
+	c.execute(query4)
+	print(query4)
+	r=c.fetchall()
+	total = 0
+	for row in r:
+	    total = total+ int(row[0])
+	resp = ("Your total calorie count is")
+	update.message.reply_text(resp)
+	update.message.reply_text(total)
     elif intent == 'foodConsumed':  # what food items have i eaten so far
         if entity == 'foods':
             resp = "How much did you have?"
@@ -69,7 +82,10 @@ def message(bot, update):
         print('+++++++++++++++++++++++++++',response['context']['foods'],'++++++++++++++++++++')
         foodItem = response['context']['foods']
         foods =  foodItem.encode('ascii','ignore')
+        print('aaa')
+        print(foods)
         count = response['context']['quantity']
+        print(count)
         if 'foods' in response['context'] and 'quantity' in response['context']:
             query = "SELECT kcal FROM calories WHERE food ='" +foods+"'"
             c.execute(query)
@@ -82,16 +98,27 @@ def message(bot, update):
             cal = cal*count
             update.message.reply_text("Your calorie count is ")
             update.message.reply_text(cal)
+            #query0 = "DROP TABLE if exists foodConsumed"
+            #c.execute(query0)
+            #print(query0)
+            #query1 = "CREATE TABLE foodConsumed (id int, kcal int, primary key (id))"
+            #c.execute(query1)
+            #print(query1)
+            print('aaaaaa')
+            query2 = 'INSERT INTO foodConsumed(calorie) VALUES("%s")'%(cal)
+            print(query2)
+            c.execute(query2)
             response['context'].pop('foods', None)
             response['context'].pop('quantity', None)
 
-    elif intent == 'WhatCanIEat':  # what else can i eat based on my current calorie consumption
-        resp = "What is your calorie count today?"
+    elif intent == 'Goodbye':  #Clear table
+        resp = "Thank you for using our calorie counting bot. Have a nice day."
         update.message.reply_text(resp)
-    
+	query0 = "DELETE from foodConsumed"
+	c.execute(query0)
+
     conn.commit()
     conn.close()
-
 
 def main():
     # Create the Updater and pass it your bot's token.
