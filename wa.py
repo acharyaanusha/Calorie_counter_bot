@@ -5,7 +5,6 @@ from watson_developer_cloud import ConversationV1
 import json
 import sqlite3
 context= None
-d={'name':'user'}
 
 # Define a few command handlers. These usually take the two arguments bot and
 # update. Error handlers also receive the raised TelegramError object in error.
@@ -27,43 +26,29 @@ def message(bot, update):
                                   version='2018-02-16')
 
     # get response from watson
-    print('bbb')
     response = conversation.message(
         workspace_id='25acc319-55ec-4fda-a803-5b220661c844',  # TODO
         input={'text': update.message.text},
         context=context)
-    #print('aaa')
     print(json.dumps(response, indent=2))
-    #print('def')
     # handle no entities
     if len(response['entities'])>0:    	
 	entity = response['entities'][0]['entity']
     	value = response['entities'][0]['value']
-    
     # handle no intents
     if len(response['intents'])>0:
     	intent=response['intents'][0]['intent']
         print(intent)
-    
-
     context = response['context']
-    # build response
-
     #storing date in the database
     conn = sqlite3.connect('calorie.db')
     c = conn.cursor()
-
     resp=''
-    #foods1=''
     if intent == 'Greeting':
         resp = "I am your calorie counting bot"
         update.message.reply_text(resp)
-	#users.getFullUser
-	#id:InputUser = UserFull
-	print(id)
     elif intent == 'countCalorie':  # how many calories consumed so far
         # TODO check if calorie count for the day exists for the user
-        #resp = "You haven't told me what you ate so far today. What did you eat?"
         query4 = "SELECT calorie FROM foodConsumed"
 	print(query4)
 	c.execute(query4)
@@ -82,7 +67,6 @@ def message(bot, update):
         print('+++++++++++++++++++++++++++',response['context']['foods'],'++++++++++++++++++++')
         foodItem = response['context']['foods']
         foods =  foodItem.encode('ascii','ignore')
-        print('aaa')
         print(foods)
         count = response['context']['quantity']
         print(count)
@@ -98,13 +82,6 @@ def message(bot, update):
             cal = cal*count
             update.message.reply_text("Your calorie count is ")
             update.message.reply_text(cal)
-            #query0 = "DROP TABLE if exists foodConsumed"
-            #c.execute(query0)
-            #print(query0)
-            #query1 = "CREATE TABLE foodConsumed (id int, kcal int, primary key (id))"
-            #c.execute(query1)
-            #print(query1)
-            print('aaaaaa')
             query2 = 'INSERT INTO foodConsumed(calorie) VALUES("%s")'%(cal)
             print(query2)
             c.execute(query2)
